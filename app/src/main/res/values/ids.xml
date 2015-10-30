@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="dpResult" type="id">date of birth</item>
+    <item name="arduinoresponse" type="id" />
+    <item name="graph" type="id">graph</item>
+</resources>

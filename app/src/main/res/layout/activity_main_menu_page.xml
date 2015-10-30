@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    tools:context="com.example.asus.anxietytrackerapp.MainMenuPage">
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Daily Anxiety Diary"
+        android:id="@+id/button4"
+        android:layout_below="@+id/button10"
+        android:layout_centerHorizontal="true"
+        android:clickable="true"
+        android:onClick="anxietyDiary" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome to Anxiety Tracker's Main Menu"
+        android:id="@+id/textView9"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Quick Anxiety Relief"
+        android:id="@+id/button5"
+        android:clickable="true"
+        android:contentDescription="Anxiety Feedback Control"
+        android:onClick="feedbackControl"
+        android:layout_below="@+id/button4"
+        android:layout_alignLeft="@+id/button4" />
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sensor Readings"
+        android:id="@+id/button11"
+        android:contentDescription="GSR sensor readings"
+        android:onClick="sensorData"
+        android:clickable="true"
+        android:layout_below="@+id/button5"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Goals"
+        android:id="@+id/button10"
+        android:onClick="goalTracker"
+        android:layout_marginTop="81dp"
+        android:layout_below="@+id/textView9"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.asus.anxietytrackerapp" >
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name=".UserProfileLoginPage"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".MainMenuPage"
+            android:label="@string/title_activity_main_menu_page"
+            android:parentActivityName=".UserProfileLoginPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.UserProfileLoginPage" />
+        </activity>
+        <activity
+            android:name=".FeedbackControl"
+            android:label="@string/title_activity_feedback_control"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".Goals"
+            android:label="@string/title_activity_goals"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".DailyAnxietyDiary"
+            android:label="@string/title_activity_daily_anxiety_diary"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".SensorReadingsActivity"
+            android:label="PLACEHOLDER"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".DailyAnxietyActivity"
+            android:label="@string/title_activity_daily_anxiety"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".SensorData"
+            android:label="@string/title_activity_sensor_data"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".GSRSensorActivity"
+            android:label="@string/title_activity_gsrsensor"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+        <activity
+            android:name=".RealGraphActivity"
+            android:label="@string/title_activity_real_graph"
+            android:parentActivityName=".MainMenuPage" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.asus.anxietytrackerapp.MainMenuPage" />
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,175 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="wrap_content"
+    android:layout_height="wrap_content" android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    tools:context="com.example.asus.anxietytrackerapp.UserProfileLoginPage"
+    android:layoutMode="opticalBounds">
+
+    <TextView android:text="Let's get started!" android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView"
+        android:layout_alignParentTop="true"
+        android:layout_alignStart="@+id/textView6" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:ems="10"
+        android:id="@+id/editText"
+        android:clickable="true"
+        android:hint="Full Name"
+        android:editable="true"
+        android:layout_marginTop="37dp"
+        android:textAlignment="textStart"
+        android:typeface="normal"
+        android:layout_below="@+id/textView"
+        android:layout_toEndOf="@+id/textView3" />
+
+    <Spinner
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/Gender"
+        android:spinnerMode="dropdown"
+        android:clickable="true"
+        android:longClickable="true"
+        android:dropDownWidth="fill_parent"
+        android:contentDescription="@string/spinner1"
+        android:nestedScrollingEnabled="false"
+        android:layout_below="@+id/editText"
+        android:layout_marginTop="34dp"
+        android:layout_alignStart="@+id/editText"
+        android:visibility="visible"
+        android:layout_toStartOf="@+id/button2"
+        android:dropDownSelector="@android:drawable/btn_dropdown"
+        android:layout_alignEnd="@+id/button2" />
+
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/button_save"
+        android:id="@+id/button"
+        android:layout_alignParentBottom="true"
+        android:layout_alignStart="@+id/textView5"
+        android:layout_marginStart="46dp"
+        android:clickable="true"
+        android:onClick="saveProfile" />
+
+    <Spinner
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dropdown"
+        android:id="@+id/PhysicalActivityLevel"
+        android:clickable="true"
+        android:layoutMode="opticalBounds"
+        android:importantForAccessibility="auto"
+        android:contentDescription="@string/spinner2"
+        android:focusableInTouchMode="true"
+        android:layout_alignTop="@+id/textView5"
+        android:layout_alignStart="@+id/editText"
+        android:visibility="visible" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/button2"
+        android:onClick="setDate"
+        android:text="@string/date_button_set"
+        android:clickable="true"
+        android:singleLine="false"
+        android:nestedScrollingEnabled="true"
+        android:enabled="true"
+        android:visibility="visible"
+        android:layout_below="@+id/Gender"
+        android:layout_alignEnd="@+id/datePicker" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Name"
+        android:id="@+id/textView3"
+        android:layout_above="@+id/Gender"
+        android:layout_alignStart="@+id/textView4"
+        android:layout_alignTop="@+id/editText"
+        android:layout_alignEnd="@+id/textView" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Gender"
+        android:id="@+id/textView4"
+        android:layout_alignStart="@+id/textView"
+        android:layout_alignTop="@+id/Gender"
+        android:layout_alignEnd="@+id/textView" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Physical Activity Level"
+        android:id="@+id/textView5"
+        android:layout_above="@+id/button"
+        android:layout_toStartOf="@+id/editText"
+        android:layout_marginBottom="46dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Date of Birth"
+        android:id="@+id/textView6"
+        android:layout_below="@+id/Gender"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/button_next"
+        android:id="@+id/button3"
+        android:onClick="mainPage"
+        android:clickable="true"
+        android:layout_below="@+id/textView5"
+        android:layout_alignEnd="@+id/editText"
+        android:visibility="visible" />
+
+    <DatePicker
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/datePicker"
+        android:visibility="invisible"
+        android:datePickerMode="spinner"
+        android:measureAllChildren="true"
+        android:layout_alignBottom="@+id/button2"
+        android:layout_toEndOf="@+id/textView6"
+        android:calendarViewShown="false"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView2"
+        android:layout_alignTop="@+id/Gender"
+        android:layout_alignStart="@+id/editText" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView8"
+        android:layout_alignBottom="@+id/button2"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView12"
+        android:layout_alignBottom="@+id/PhysicalActivityLevel"
+        android:layout_alignStart="@+id/editText" />
+
+
+</RelativeLayout>

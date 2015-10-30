@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">AnxietyTrackerApp2</string>
+    <string name="action_settings">Settings</string>
+    <string name="date_button_set">Set Date</string>
+    <string name="title_activity_main_menu_page">MainMenuPage</string>
+    <string name="title_activity_feedback_control">FeedbackControl</string>
+    <string name="spinner2">Physical Activity Level</string>
+    <string name="spinner1">Gender</string>
+    <string name="button_save">Save Profile</string>
+    <string name="button_next">Next</string>
+    <string-array name="reminders_array">
+        <item>1.Take slow, deep breaths.</item>
+        <item>2.Visualise a calm scenario.</item>
+        <item>3.Have positive thoughts.</item>
+    </string-array>
+    <string name="title_activity_daily_anxiety_log">DailyAnxietyLog</string>
+    <string name="title_activity_goals">Goals</string>
+    <string name="title_activity_daily_anxiety_diary">DailyAnxietyDiary</string>
+    <string name="title_activity_bluetooth_main">BluetoothMain</string>
+    <string name="none_paired">No devices have been paired</string>
+    <string name="ConnectingBT">Connecting...</string>
+    <string name="endofDatastring">~</string>
+    <string name="title_activity_daily_anxiety">DailyAnxietyActivity</string>
+    <string name="title_activity_sensor_data">SensorData</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+    <string name="title_activity_gsrsensor">GSRSensorActivity</string>
+
+<!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="menu_insert" > Insert Menu</string>
+    <string name="menu_delete" >Delete Menu</string>
+    <string name="body" > Content</string>
+    <string name="title" >Title</string>
+    <string name="confirm">Confirm</string>
+    <string name="title_activity_real_graph">RealGraphActivity</string>
+</resources>
