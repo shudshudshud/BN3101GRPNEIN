@@ -10,14 +10,19 @@
         android:layout_width="match_parent"
         android:layout_height="200dip"
         android:id="@+id/graph" />
-    <Button
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="200dip"
+        android:layout_below="@id/graph"
+        android:id="@+id/graph2" />
+    Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Get GSR"
         android:id="@+id/btn_realtime"
         android:onClick="getGSR"
         android:clickable="true"
-        android:layout_below="@+id/graph"
+        android:layout_below="@+id/graph2"
         android:layout_alignParentStart="true" />
 
     <TextView
@@ -26,9 +31,8 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="Large Text"
         android:id="@+id/dataText"
-        android:layout_below="@+id/btn_realtime"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="57dp" />
+        android:layout_below="@+id/graph2"
+        android:layout_centerHorizontal="true" />
 
 
 </RelativeLayout>

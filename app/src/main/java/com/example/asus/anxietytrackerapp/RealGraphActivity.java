@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -39,9 +40,13 @@ public class RealGraphActivity extends Activity {
 
     //to plot realtime graph
     private Runnable mTimer1;  //GSR = 1
-    private GraphView gsrgraph;
-    private LineGraphSeries<DataPoint> gsrSeries;
-    private ArrayList<DataPoint> seriesGSR;
+
+    private GraphView gsrGraph;
+    LineGraphSeries<DataPoint> gsrSeries = new LineGraphSeries<>();
+
+    private GraphView ibiGraph;
+    LineGraphSeries<DataPoint> ibiSeries = new LineGraphSeries<>();
+    //private ArrayList<DataPoint> seriesGSR;
 
 
     //DATA READINGS VARS
@@ -62,6 +67,8 @@ public class RealGraphActivity extends Activity {
     private BluetoothSocket btSocket = null;
     private StringBuilder recDataString = new StringBuilder();
 
+    TextView outText;
+
     private ConnectedThread mConnectedThread;
 
 
@@ -78,16 +85,36 @@ public class RealGraphActivity extends Activity {
         //setContentView(R.layout.activity_feedback_control);
         getActionBar().setDisplayHomeAsUpEnabled(true);
 
-        Toast.makeText(this, "onCreate, ReadGraph..", Toast.LENGTH_LONG).show();
-        seriesGSR = new ArrayList<DataPoint>();
+        //Toast.makeText(this, "onCreate, ReadGraph..", Toast.LENGTH_LONG).show();
+        //seriesGSR = new ArrayList<DataPoint>();
 
+        //Graph setup - GSR
+        gsrGraph = (GraphView)findViewById(R.id.graph);
+        gsrGraph.getViewport().setXAxisBoundsManual(false);
+        //gsrGraph.getViewport().setScalable(true);
+        //gsrGraph.getViewport().setScrollable(true);
+        gsrGraph.getViewport().setYAxisBoundsManual(false);
+        gsrGraph.getViewport().setMinY(0);
+        gsrGraph.getViewport().setMaxY(15);
+        //gsrGraph.getViewport().setMinX();
+        gsrGraph.addSeries(gsrSeries);
+
+        //Graph setup - IBI
+        ibiGraph = (GraphView)findViewById(R.id.graph2);
+        ibiGraph.getViewport().setXAxisBoundsManual(false);
+        ibiGraph.getViewport().setYAxisBoundsManual(false);
+        ibiGraph.getViewport().setMinY(0);
+        ibiGraph.getViewport().setMaxY(15);
+        ibiGraph.addSeries(ibiSeries);
+
+        outText = ((TextView)findViewById(R.id.dataText));
 
 //Thread handlers are implemented in the main thread of an application and are primarily used to make updates to the user interface in response
 // to messages sent by another thread running within the application’s process.
         mHandler = new Handler() {
             public void handleMessage(Message msg) {
                 if (msg.what == handlerState) {       //if message is what we want
-                    Toast.makeText(getApplicationContext(), "hi", Toast.LENGTH_LONG).show();
+                    //Toast.makeText(getApplicationContext(), "hi", Toast.LENGTH_LONG).show();
 
                     // Gets the string message from the incoming Message object.
                     String readMessage = (String) msg.obj;
@@ -97,7 +124,7 @@ public class RealGraphActivity extends Activity {
 
                     //check if we have >= 1 packet inside
                     if (hasAtLeastOnePacket(recDataString.toString())) {
-                        ((TextView)findViewById(R.id.dataText)).setText(recDataString);
+                        //outText.setText(recDataString);
                         dataExtracter(recDataString.toString());
                     }
 
@@ -134,23 +161,30 @@ public class RealGraphActivity extends Activity {
         //remove everything before first #
         return data.substring(data.indexOf("#"));
 
-        //remove until first #
-
-    }
-
-    public boolean isFullPacket(String data) {
-        //return data.indexOf("#" )
 
 
     }
+
+
 
     public boolean hasAtLeastOnePacket(String data) {
+
         int hexIdx = data.indexOf("#");
-        int pipeIdx = data.indexOf("|");
+        //search for the pipe index (end of packet) AFTER the hex index.
+        int pipeIdx = data.indexOf("|", hexIdx);
 
-        
+        //if we can find a hex and a following pipe index
+        if (hexIdx != -1 && pipeIdx != -1) {
+            return true;
+        } else {
+            return false;
+        }
 
 
+    }
+
+    public boolean packetEndsProperly(String packet) {
+        return packet.charAt(packet.length() - 1) == '|';
     }
 
     public void dataExtracter(String sentValues) {
@@ -165,19 +199,51 @@ public class RealGraphActivity extends Activity {
         if (firstData) {
             inputData = trimStart(inputData);
             firstData = true;
+            Log.d("data", "Post-trim: " + inputData);
         }
 
-
-
-
+        //get the actual packet data
         String stringed = recDataString.toString();
+        //split by | to get full packets
         String[] splitPackets = stringed.split(Pattern.quote("|"));
 
-        for (int i = 0; i < splitPackets.length; i++) {
-            Log.d("data", splitPackets[i]);
+        //packets to process depends on whether the last packet is a full packet (ie ends with '|')
+        String[] packetsToProcess;
+
+        //check if the last packet ends with a |
+        if (packetEndsProperly(stringed)) {
+            packetsToProcess = splitPackets;
+
+
+
+            //reset the string accumulator
+            recDataString.setLength(0);
+        } else {
+            //don't process the last packet, add back to accumulator
+            packetsToProcess = Arrays.copyOfRange(splitPackets, 0, splitPackets.length - 2);
+
+            String lastPacket = splitPackets[splitPackets.length - 1];
+            recDataString.setLength(0);
+            recDataString.append(lastPacket);
         }
 
-        recDataString.setLength(0);
+        //ACTUAL PACKET PROCESSING CODE
+        for (String packet : packetsToProcess) {
+            int gsr_idx = packet.indexOf("+") + 1;
+            int time_elapsed_idx = packet.indexOf("$") + 1;
+
+            double ibi = Double.parseDouble(packet.substring(1, gsr_idx - 1));
+            double gsr = Double.parseDouble(packet.substring(gsr_idx, time_elapsed_idx - 1));
+            double time_elapsed = Double.parseDouble(packet.substring(time_elapsed_idx));
+
+            //update graph
+            gsrSeries.appendData(new DataPoint(time_elapsed, gsr), true, 40);
+            ibiSeries.appendData(new DataPoint(time_elapsed, ibi), true, 40);
+
+            //Log.d("data", "ibi: " + ibi + " ||| gsr: " + gsr + " ||| time_elapsed: " + time_elapsed);
+            outText.setText("ibi: " + ibi + " ||| gsr: " + gsr + " ||| time_elapsed: " + time_elapsed);
+            dataPackets.add(new Packet(gsr, time_elapsed));
+        }
 
 
 
@@ -192,7 +258,6 @@ public class RealGraphActivity extends Activity {
         int time_elapsed = Integer.parseInt(sentValues.substring(time_elapsed_idx));
         Log.d("data", "time elapsed: " + sentValues);
 
-        dataPackets.add(new Packet(gsr, time_elapsed));
 
         //time_elapsed_idx is the latest packet time
         if (time_elapsed > next_computation_time) {
@@ -372,9 +437,9 @@ public class RealGraphActivity extends Activity {
     class Packet {
 
         private double gsr;
-        private int time_elapsed;
+        private double time_elapsed;
 
-        public Packet(double gsr, int time_elapsed) {
+        public Packet(double gsr, double time_elapsed) {
 
             this.gsr = gsr;
             this.time_elapsed = time_elapsed;

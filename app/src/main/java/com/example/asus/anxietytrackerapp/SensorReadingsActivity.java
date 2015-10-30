@@ -15,13 +15,7 @@ public class SensorReadingsActivity extends Activity {
         setContentView(R.layout.activity_sensor_readings);
 
 
-        Button getGraph = (Button) findViewById(R.id.btn_realtime);
-        getGraph.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        startGraphActivity(RealGraphActivity.class);
-                    }
-                });
+
     }
 
     private void startGraphActivity(Class<? extends Activity> activity) {
