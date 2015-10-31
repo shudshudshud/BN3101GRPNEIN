@@ -419,7 +419,7 @@ public class RealGraphActivity extends Activity {
         Log.d("gsr66", gsr66 + "");
         Log.d("gsrMax", gsrMax + "");
 
-        
+
 
 
 
@@ -596,7 +596,8 @@ public class RealGraphActivity extends Activity {
         Log.d("SDNN", "Sdnn: " + SDNN);
 
         //calculate the stress percentage based SDNN
-        return getSDNNStressPercentage(SDNN);
+        //do 100 MINUS because SDNN is inverse to the actual stress
+        return 100 - getSDNNStressPercentage(SDNN);
 
 
     }
