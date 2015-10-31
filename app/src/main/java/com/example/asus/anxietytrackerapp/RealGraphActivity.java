@@ -309,19 +309,119 @@ public class RealGraphActivity extends Activity {
         return SD;
     }
 
+    public double getMinGSR(ArrayList<Packet> packets) {
+        double gsrMin = Double.MAX_VALUE;
+
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                double gsrVal = packet.getGSR();
+
+                if (gsrVal < gsrMin) {
+                    gsrMin = gsrVal;
+                }
+            }
+        }
+
+        return gsrMin;
+    }
+
+    public double getMaxGSR(ArrayList<Packet> packets) {
+        double gsrMax = -Double.MAX_VALUE;
+
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                double gsrVal = packet.getGSR();
+
+                if (gsrVal > gsrMax) {
+                    gsrMax = gsrVal;
+                }
+            }
+        }
+
+        return gsrMax;
+    }
+
     public void updateCalibrationValues() {
         //have 3 arraylists, baselinePackets, testPackets and maxPackets
 
         // ---- GSR SECTION ----
+
+        //AVERAGES
         double baselineAvg = getAverageGSR(baselinePackets);
         double testAvg = getAverageGSR(testPackets);
         double maxAvg = getAverageGSR(maxPackets);
 
+        //STANDARD DEVIATIONS
         double baselineSD = getSDGSR(baselinePackets);
         double testSD = getSDGSR(testPackets);
         double maxSD = getSDGSR(maxPackets);
 
+        ArrayList<Packet> overallCalibrationPackets = new ArrayList<>();
+        overallCalibrationPackets.addAll(baselinePackets);
+        overallCalibrationPackets.addAll(testPackets);
+        overallCalibrationPackets.addAll(maxPackets);
+
+        double overallGSRMin = getMinGSR(overallCalibrationPackets);
+        double overallGSRMax = getMaxGSR(overallCalibrationPackets);
+
+        //95% CONFIDENCE INTERVAL BOUNDS
+        //L = lower, H = higher
+        //M = mean
+        //S = start, T = test, M = max
+        //pick and choose to figure out name
+        double LMS = (1.96 * baselineSD) - baselineAvg;
+        double HMS = (1.96 * baselineSD) + baselineAvg;
+        double LMT = (1.96 * testSD) - testAvg;
+        double HMT = (1.96 * testSD) + testAvg;
+        double LMM = (1.96 * maxSD) - maxAvg;
+        double HMM = (1.96 * maxSD) + maxAvg;
+
+
+
+        Log.d("BEFORE", "BEFORE!");
+        Log.d("gsrMin", gsrMin + "");
+        Log.d("gsr33", gsr33 + "");
+        Log.d("gsr66", gsr66 + "");
+        Log.d("gsrMax", gsrMax + "");
+
+
+        //set global calib parameters
+        gsrMin = overallGSRMin;
+        gsrMax = overallGSRMax;
+
+
+
+        //based on syad's rules: setting calib values
+        //sorry if this is incomprehensible, had good reason.
+        if (LMT > HMS) {
+            gsr33 = LMT;
+        } else if (LMT < HMS && LMT > baselineAvg) {
+            gsr33 = (LMT + HMS) / 2;
+        } else if (LMT < baselineAvg) {
+            gsr33 = baselineAvg;
+        } else {
+            Log.d("gsr33 problem", "edge case for gsr33");
+        }
+
+        if (LMM > HMT) {
+            gsr66 = LMM;
+        } else if (LMM < HMT && LMM > testAvg) {
+            gsr66 = (LMM + HMT) / 2;
+        } else if (LMM < testAvg) {
+            gsr66 = testAvg;
+        } else {
+            Log.d("gsr66 problem", "edge case for gsr66");
+        }
+
+        Log.d("AFTER", "AFTER!");
+        Log.d("gsrMin", gsrMin + "");
+        Log.d("gsr33", gsr33 + "");
+        Log.d("gsr66", gsr66 + "");
+        Log.d("gsrMax", gsrMax + "");
+
         
+
+
 
         // ---- END GSR SECTION ----
 
