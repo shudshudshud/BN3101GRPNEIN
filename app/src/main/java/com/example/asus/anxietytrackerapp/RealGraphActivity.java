@@ -82,8 +82,13 @@ public class RealGraphActivity extends Activity {
         BEFORE_CALIB, DURING_BASELINE, BREAK_BEFORE_TEST, DURING_TEST, BREAK_BEFORE_MAX, DURING_MAX, AFTER_MAX
     }
 
-    boolean calibrationHappening = true;
+    boolean calibrationHappening = false;
     CALIBRATION_STATE currentCalibrationState = CALIBRATION_STATE.BEFORE_CALIB;
+
+
+    ArrayList<Packet> baselinePackets = new ArrayList<>();
+    ArrayList<Packet> testPackets = new ArrayList<>();
+    ArrayList<Packet> maxPackets = new ArrayList<>();
 
     /*
         END OF SETTINGS
@@ -131,8 +136,8 @@ public class RealGraphActivity extends Activity {
     public static UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     //specify the MAC address of the Bluetooth address that you want to connect to
-    private static String address = "98:D3:31:70:4D:02";
-
+    //private static String address = "98:D3:31:70:4D:02";
+    private static String address = "98:D3:31:70:4C:C7";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -164,12 +169,29 @@ public class RealGraphActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //increase the current calibration state
-                if (currentCalibrationState != currentCalibrationState.AFTER_MAX) {
+                if (currentCalibrationState != CALIBRATION_STATE.AFTER_MAX) {
+                    //change calibration state
+                    if (currentCalibrationState != CALIBRATION_STATE.DURING_MAX) {
+                        calibrationHappening = true;
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Calibration Over!", Toast.LENGTH_LONG).show();
+                        calibrationHappening = false;
+
+                        //PROCESS CALIBRATION DATA
+                        updateCalibrationValues();
+
+                        //CLEAR VARIABLES!
+                        dataPackets.clear();
+                        //set the next calculation time
+                        nextComputeTime = Calendar.getInstance().getTimeInMillis() + msecBetweenComputes;
+
+                    }
                     currentCalibrationState = CALIBRATION_STATE.values()[currentCalibrationState.ordinal() + 1];
                     calibrationButton.setText(currentCalibrationState.toString());
                 } else {
-                    currentCalibrationState = CALIBRATION_STATE.values()[0];
-                    calibrationButton.setText(currentCalibrationState.toString());
+
+                    //currentCalibrationState = CALIBRATION_STATE.values()[0];
+                    //calibrationButton.setText(currentCalibrationState.toString());
                 }
             }
         });
@@ -178,15 +200,25 @@ public class RealGraphActivity extends Activity {
         toggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                calibrationHappening = !calibrationHappening;
+                calibrationButton.setEnabled(!calibrationButton.isEnabled());
+                currentCalibrationState = CALIBRATION_STATE.values()[0];
+                calibrationButton.setText(currentCalibrationState.toString());
 
-                
+                if (!calibrationButton.isEnabled()) {
+                    calibrationHappening = false;
+
+                    baselinePackets.clear();
+                    testPackets.clear();
+                    maxPackets.clear();
+
+                }
+
             }
         });
 
 //Thread handlers are implemented in the main thread of an application and are primarily used to make updates to the user interface in response
 // to messages sent by another thread running within the application’s process.
-        /*
+
         mHandler = new Handler() {
             public void handleMessage(Message msg) {
                 if (msg.what == handlerState) {       //if message is what we want
@@ -215,7 +247,7 @@ public class RealGraphActivity extends Activity {
 
         btAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
         checkBTState();
-*/
+
 
         //btnRead.setOnClickListener(new View.OnClickListener() {
         //public void onClick(View v) {
@@ -231,7 +263,73 @@ public class RealGraphActivity extends Activity {
         return data.substring(data.indexOf("#"));
     }
 
+    public double getAverageGSR(ArrayList<Packet> packets) {
+        double gsrAccumulator = 0;
+        double gsrCount = 0;
 
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                gsrAccumulator += packet.getGSR();
+                gsrCount++;
+            }
+        }
+
+        double averageGSR = gsrAccumulator / gsrCount;
+        return averageGSR;
+    }
+
+    public double getSDGSR(ArrayList<Packet> packets) {
+        double gsrAccumulator = 0;
+        double gsrCount = 0;
+
+        //getting the mean and number of useful packets
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                gsrAccumulator += packet.getGSR();
+                gsrCount++;
+            }
+        }
+
+        //average calculated
+        double averageGSR = gsrAccumulator / gsrCount;
+        
+
+        //all (xi - xavg) ^ 2 - calculate squared sum
+        double sumSquared = 0;
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                sumSquared += Math.pow((packet.getGSR() - averageGSR), 2);
+            }
+        }
+
+        //final SD value
+        double SD = Math.sqrt((1 / gsrCount) * sumSquared);
+        Log.d("SDNN", "GSR SD: " + SD);
+        
+        return SD;
+    }
+
+    public void updateCalibrationValues() {
+        //have 3 arraylists, baselinePackets, testPackets and maxPackets
+
+        // ---- GSR SECTION ----
+        double baselineAvg = getAverageGSR(baselinePackets);
+        double testAvg = getAverageGSR(testPackets);
+        double maxAvg = getAverageGSR(maxPackets);
+
+        double baselineSD = getSDGSR(baselinePackets);
+        double testSD = getSDGSR(testPackets);
+        double maxSD = getSDGSR(maxPackets);
+
+        
+
+        // ---- END GSR SECTION ----
+
+        //clear all packet buffers at end
+        baselinePackets.clear();
+        testPackets.clear();
+        maxPackets.clear();
+    }
 
     public boolean hasAtLeastOnePacket(String data) {
 
@@ -395,6 +493,7 @@ public class RealGraphActivity extends Activity {
 
         //final SDNN value
         double SDNN = Math.sqrt((1 / ibiCount) * sumSquared);
+        Log.d("SDNN", "Sdnn: " + SDNN);
 
         //calculate the stress percentage based SDNN
         return getSDNNStressPercentage(SDNN);
@@ -466,7 +565,7 @@ public class RealGraphActivity extends Activity {
         //packets to process depends on whether the last packet is a full packet (ie ends with '|')
         String[] packetsToProcess;
 
-        //check if the last packet ends with a |
+        //check if the last packet ends with a |, split the packets to process accordingly
         if (packetEndsProperly(stringed)) {
             packetsToProcess = splitPackets;
 
@@ -496,13 +595,32 @@ public class RealGraphActivity extends Activity {
 
             //Log.d("data", "ibi: " + ibi + " ||| gsr: " + gsr + " ||| time_elapsed: " + time_elapsed);
             outText.setText("ibi: " + ibi + " ||| gsr: " + gsr + " ||| time_elapsed: " + time_elapsed);
-            dataPackets.add(new Packet(gsr, time_elapsed, ibi));
-            Log.d("data", "datapackets length " + dataPackets.size());
+
+            Packet newPacket = new Packet(gsr, time_elapsed, ibi);
+
+            //add the packet to the correct arraylist
+            if (calibrationHappening) {
+                if (currentCalibrationState == CALIBRATION_STATE.DURING_BASELINE) {
+                    baselinePackets.add(newPacket);
+                    Log.d("data", "baseline length " + baselinePackets.size());
+                } else if (currentCalibrationState == CALIBRATION_STATE.DURING_TEST) {
+                    testPackets.add(newPacket);
+                    Log.d("data", "test length " + testPackets.size());
+                } else if (currentCalibrationState == CALIBRATION_STATE.DURING_MAX) {
+                    maxPackets.add(newPacket);
+                    Log.d("data", "max length " + maxPackets.size());
+                }
+            } else {
+                dataPackets.add(newPacket);
+                Log.d("data", "datapackets length " + dataPackets.size());
+            }
+
+
         }
 
 
-        //have to compute now!
-        if (Calendar.getInstance().getTimeInMillis() > nextComputeTime) {
+        //CHECK IF TIME TO COMPUTE HAS ARRIVED
+        if (Calendar.getInstance().getTimeInMillis() > nextComputeTime && !calibrationHappening) {
             //do computation
             double stressIndex = getStressIndex(dataPackets);
             Log.d("STRESSINDEX", stressIndex +"");
@@ -536,7 +654,7 @@ public class RealGraphActivity extends Activity {
         return device.createRfcommSocketToServiceRecord(MY_UUID);
         //creates secure outgoing connection with BT device using UUID
     }
-/*
+
     @Override
     public void onResume() {
 
@@ -567,8 +685,8 @@ public class RealGraphActivity extends Activity {
         mConnectedThread.write("x");
 
     }
-*/
-/*
+
+
     @Override
     public void onPause() {
         super.onPause();
@@ -579,7 +697,7 @@ public class RealGraphActivity extends Activity {
             //insert code to deal with this
         }
     }
-*/
+
 
     //Checks that the Android device Bluetooth is available and prompts to be turned on if off
     private void checkBTState() {

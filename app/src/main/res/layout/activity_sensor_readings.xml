@@ -43,7 +43,8 @@
         android:text="Start Calibration"
         android:id="@+id/buttonCalibrate"
         android:layout_below="@+id/dataText"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:enabled="false" />
 
     <ToggleButton
         android:layout_width="wrap_content"
@@ -52,7 +53,7 @@
         android:id="@+id/toggleButton"
         android:layout_below="@+id/buttonCalibrate"
         android:layout_centerHorizontal="true"
-        android:checked="false"
+        android:checked="true"
         android:textOn="Analysis Mode"
         android:textOff="Calibration Mode" />
 
