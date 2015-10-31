@@ -162,22 +162,27 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
         if (sharedpreferences.contains(Name)) {
             myName.setText(sharedpreferences.getString(Name, ""));
-            return myName;
+            String myNameString = myName.getText().toString();
+            return myNameString;
         }
         if (sharedpreferences.contains(Gender)) {
             selectedGender.setText(sharedpreferences.getString(Gender, ""));
-            return selectedGender;
+            String selectedGenderString = selectedGender.getText().toString();
+            return selectedGenderString;
 
         }
         if (sharedpreferences.contains(Date)) {
             dateView.setText(sharedpreferences.getString(Date, ""));
-            return dateView;
+            String dateViewString = dateView.getText().toString();
+            return dateViewString;
 
         }
         if (sharedpreferences.contains(Fitness)) {
             selectedFitness.setText(sharedpreferences.getString(Fitness, ""));
-            return selectedFitness;
+            String selectedFitnessString = selectedFitness.getText().toString();
+            return selectedFitnessString;
         }
+        return "";
     }
 
     private void setCurrentDate() {

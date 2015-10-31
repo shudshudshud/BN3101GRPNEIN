@@ -85,9 +85,4 @@ public class Goals extends Activity {
 
                 });
     }
-
-
-
-
-
 }
