@@ -119,25 +119,39 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
         });
     }
 
-
-    public void saveProfile(View v) {
+    public void saveProfile(View view) {
 
         //To save user's profile data into phone's internal storage.
-        String name  = myName.getText().toString();
-        String dob  = dateView.getText().toString();
-        String gender  = selectedGender.getText().toString();
-        String fitness  = selectedFitness.getText().toString();
+        SavePreferences("Name", myName.getText().toString());
+        SavePreferences("Date", dateView.getText().toString());
+        SavePreferences("Gender", selectedGender.getText().toString());
+        SavePreferences("Fitness", selectedFitness.getText().toString());
+        LoadPreferences();
+    }
 
-
-        SharedPreferences.Editor editor = sharedpreferences.edit();
-        editor.putString(Name, name);
-        editor.putString(Date, dob);
-        editor.putString(Gender, gender);
-        editor.putString(Fitness, fitness);
+    private void SavePreferences(String key, String value){
+        SharedPreferences sharedPreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(key, value);
         editor.commit();
     }
 
-    public void getProfile (View view) {
+    private void LoadPreferences(){
+
+        SharedPreferences sharedPreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+
+        String strSavedMem1 = getProfile("Name", "");
+        String strSavedMem2 = getProfile("Date", "");
+        String strSavedMem3 = getProfile("Gender", "");
+        String strSavedMem4 = getProfile("Fitness", "");
+
+        myName.setText(strSavedMem1);
+        dateView.setText(strSavedMem2);
+        selectedGender.setText(strSavedMem3);
+        selectedFitness.setText(strSavedMem4);
+    }
+
+    public String getProfile (String a, String b) {
         myName = (EditText) findViewById(R.id.editText);
         dateView = (TextView) findViewById(R.id.textView4);
         selectedFitness = (TextView) findViewById(R.id.textView12);
@@ -148,21 +162,23 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
         if (sharedpreferences.contains(Name)) {
             myName.setText(sharedpreferences.getString(Name, ""));
+            return myName;
         }
         if (sharedpreferences.contains(Gender)) {
             selectedGender.setText(sharedpreferences.getString(Gender, ""));
+            return selectedGender;
 
         }
         if (sharedpreferences.contains(Date)) {
             dateView.setText(sharedpreferences.getString(Date, ""));
-
-        }if (sharedpreferences.contains(Fitness)) {
-            selectedFitness.setText(sharedpreferences.getString(Fitness, ""));
+            return dateView;
 
         }
+        if (sharedpreferences.contains(Fitness)) {
+            selectedFitness.setText(sharedpreferences.getString(Fitness, ""));
+            return selectedFitness;
+        }
     }
-
-
 
     private void setCurrentDate() {
 
@@ -184,7 +200,6 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
         datePicker.init(year, month, day, null);
 
     }
-
 
     public void setDate(View view) {
 
@@ -215,12 +230,10 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
         }
     };
 
-
     public void mainPage(View v){
         Intent intent = new Intent(UserProfileLoginPage.this,MainMenuPage.class);
         startActivity(intent);
     }
-
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -234,10 +247,3 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
 
 }
-
-
-
-
-
-
-
