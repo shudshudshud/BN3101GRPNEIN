@@ -9,8 +9,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
@@ -21,22 +24,76 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 public class RealGraphActivity extends Activity {
 
+
+    /*
+        SETTIMGS! CHANGE HERE!
+
+    */
+
+    //number of points to display on the graph
+    int numPointsToDisplay = 20;
+
+    //threshold for double = zero equality, DO NOT TOUCH unless you know what you are doing
+    double doubleZeroThreshold = 0.05;
+
+    //default GSR Calibration values
+    double defaultGSRMin = 0;
+    double defaultGSRMax = 6;
+    double defaultGSR33 = 2;
+    double defaultGSR66 = 4;
+
+    //actual GSR values
+    double gsrMin = 0;
+    double gsrMax = 6;
+    double gsr33 = 2;
+    double gsr66 = 4;
+
+    //GSR Cutoff for good/bad values
+    double gsrCutoff = 0.6;
+    //IBI Cutoff for good/bad values
+    double ibiCutoff = 0.1;
+
+    double percentageCutoff = 20.0;
+    //double sdnnCutoff = 0.0;
+
+    //default SDNN Calibration values
+    double defaultSDNNMin = 0;
+    double defaultSDNNMax = 6;
+    double defaultSDNN33 = 2;
+    double defaultSDNN66 = 4;
+
+    //actual SDNN values
+    double SDNNMin = 0;
+    double SDNNMax = 6;
+    double SDNN33 = 2;
+    double SDNN66 = 4;
+
+    long nextComputeTime;
+    long msecBetweenComputes = 5000;
+
+    public enum CALIBRATION_STATE {
+        BEFORE_CALIB, DURING_BASELINE, BREAK_BEFORE_TEST, DURING_TEST, BREAK_BEFORE_MAX, DURING_MAX, AFTER_MAX
+    }
+
+    boolean calibrationHappening = true;
+    CALIBRATION_STATE currentCalibrationState = CALIBRATION_STATE.BEFORE_CALIB;
+
+    /*
+        END OF SETTINGS
+     */
+
     //private final Handler mHandler = new Handler();
 
     //whatever is needed for data extraction
     static ArrayList<Packet> dataPackets = new ArrayList<Packet>();
-    //initial time to compute
-    static int next_computation_time = 60000;
-    //how much time to add after each compute
-    static int computation_step = 60000;
-    //the current index to compute from
-    static int compute_index_from = 0;
+
 
     //to plot realtime graph
     private Runnable mTimer1;  //GSR = 1
@@ -53,8 +110,6 @@ public class RealGraphActivity extends Activity {
     boolean firstData = false;
 
 
-    int dataCount = 1;
-    int timeXAxis = 1;
 
     //User Interface Variables
     //COMMENTED THIS OUT - DEFINED ONCE ABOVE
@@ -91,26 +146,47 @@ public class RealGraphActivity extends Activity {
         //Graph setup - GSR
         gsrGraph = (GraphView)findViewById(R.id.graph);
         gsrGraph.getViewport().setXAxisBoundsManual(false);
-        //gsrGraph.getViewport().setScalable(true);
-        //gsrGraph.getViewport().setScrollable(true);
         gsrGraph.getViewport().setYAxisBoundsManual(false);
-        gsrGraph.getViewport().setMinY(0);
-        gsrGraph.getViewport().setMaxY(15);
-        //gsrGraph.getViewport().setMinX();
         gsrGraph.addSeries(gsrSeries);
 
         //Graph setup - IBI
         ibiGraph = (GraphView)findViewById(R.id.graph2);
         ibiGraph.getViewport().setXAxisBoundsManual(false);
         ibiGraph.getViewport().setYAxisBoundsManual(false);
-        ibiGraph.getViewport().setMinY(0);
-        ibiGraph.getViewport().setMaxY(15);
         ibiGraph.addSeries(ibiSeries);
 
         outText = ((TextView)findViewById(R.id.dataText));
 
+        //calibration button click listener
+        final Button calibrationButton = (Button) findViewById(R.id.buttonCalibrate);
+        calibrationButton.setText(currentCalibrationState.toString());
+        calibrationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //increase the current calibration state
+                if (currentCalibrationState != currentCalibrationState.AFTER_MAX) {
+                    currentCalibrationState = CALIBRATION_STATE.values()[currentCalibrationState.ordinal() + 1];
+                    calibrationButton.setText(currentCalibrationState.toString());
+                } else {
+                    currentCalibrationState = CALIBRATION_STATE.values()[0];
+                    calibrationButton.setText(currentCalibrationState.toString());
+                }
+            }
+        });
+
+        final ToggleButton toggleButton = (ToggleButton) findViewById(R.id.toggleButton);
+        toggleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                calibrationHappening = !calibrationHappening;
+
+                
+            }
+        });
+
 //Thread handlers are implemented in the main thread of an application and are primarily used to make updates to the user interface in response
 // to messages sent by another thread running within the application’s process.
+        /*
         mHandler = new Handler() {
             public void handleMessage(Message msg) {
                 if (msg.what == handlerState) {       //if message is what we want
@@ -125,7 +201,7 @@ public class RealGraphActivity extends Activity {
                     //check if we have >= 1 packet inside
                     if (hasAtLeastOnePacket(recDataString.toString())) {
                         //outText.setText(recDataString);
-                        dataExtracter(recDataString.toString());
+                        dataExtractor(recDataString.toString());
                     }
 
 
@@ -139,15 +215,8 @@ public class RealGraphActivity extends Activity {
 
         btAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
         checkBTState();
-
-        // init series data for gsr
-        //gsrSeries = new LineGraphSeries(new GraphViewData[]{});
-/*
-        gsrSeries = new LineGraphSeries<DataPoint>(seriesGSR.toArray());
-        //gsrgraph = new LineGraphView(this, "GSRGraph");  //context, heading
-        gsrgraph = (GraphView) findViewById(R.id.graph);
-        gsrgraph.addSeries(gsrSeries); // data
 */
+
         //btnRead.setOnClickListener(new View.OnClickListener() {
         //public void onClick(View v) {
         // mConnectedThread.write("1");    // Send "1" via Bluetooth
@@ -160,9 +229,6 @@ public class RealGraphActivity extends Activity {
     public String trimStart(String data) {
         //remove everything before first #
         return data.substring(data.indexOf("#"));
-
-
-
     }
 
 
@@ -187,7 +253,194 @@ public class RealGraphActivity extends Activity {
         return packet.charAt(packet.length() - 1) == '|';
     }
 
-    public void dataExtracter(String sentValues) {
+    public boolean isDoubleZero(double doubleToCheck) {
+        //NOTE - VERY BAD PRACTISE BY ME, SORRY - USES A GLOBAL VARIABLE AS CONFIDENCE THRESHOLD FOR DOUBLE ZERO EQUALITY
+
+        return doubleToCheck >= -doubleZeroThreshold && doubleToCheck <= doubleZeroThreshold;
+    }
+
+    /*
+    //gets the last x miliseconds of data
+    public ArrayList<Packet> getLastXMsecData(ArrayList<Packet> packets) {
+        ArrayList<Packet> packetsToReturn
+    }
+    */
+
+    //calculate the percentage of samples in the packet list that have useful GSR data
+    public double getPercentUsefulGSR(ArrayList<Packet> packets) {
+        int usefulSamples = 0;
+        int totalSamples = packets.size();
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                usefulSamples++;
+            }
+        }
+
+        return (usefulSamples / totalSamples) * 100;
+    }
+
+    //calculate the percentage of samples in the packet list that have useful IBI data
+    public double getPercentUsefulIBI(ArrayList<Packet> packets) {
+        int usefulSamples = 0;
+        int totalSamples = packets.size();
+        for (Packet packet : packets) {
+            if (packet.getIBI() > ibiCutoff) {
+                usefulSamples++;
+            }
+        }
+
+        return (usefulSamples / totalSamples) * 100;
+    }
+
+    //calculate a GSR Stress value from the average GSR
+    public double getGSRStressPercentage(double avgGsr) {
+        if (avgGsr < gsrMin) {
+            //not stressed and below the normal min
+            gsrMin = avgGsr;
+            return 0;
+        } else if (gsrMin <= avgGsr && avgGsr < gsr33) {
+            //not stressed
+            return ((avgGsr - gsrMin)
+                          /
+                    (gsr33 - gsrMin))   * (33 / 100);
+        } else if (gsr33 <= avgGsr && avgGsr < gsr66) {
+            //stressed
+            return 33 + (((avgGsr - gsr33) /
+                         (gsr66 - gsr33)) * (33 / 100));
+        } else if (gsr66 <= avgGsr && avgGsr < gsrMax) {
+            return 66 + (((avgGsr - gsr66) /
+                         (gsrMax - gsr66)) * (34 / 100));
+        } else if (avgGsr >= gsrMax) {
+            gsrMax = avgGsr;
+            return 100;
+        } else {
+            Log.e("out of bounds", "getGSR Stress Percentage failure!");
+            return 0; //SHOULD NOT HAPPEN
+        }
+    }
+
+    //calculate a SDNN Stress value from the average SDNN
+    public double getSDNNStressPercentage(double SDNN) {
+        if (SDNN < SDNNMin) {
+            //not stressed and below the normal min
+            SDNNMin = SDNN;
+            return 0;
+        } else if (SDNNMin <= SDNN && SDNN < SDNN33) {
+            //not stressed
+            return ((SDNN - SDNNMin)
+                    /
+                    (SDNN33 - SDNNMin))   * (33 / 100);
+        } else if (SDNN33 <= SDNN && SDNN < SDNN66) {
+            //stressed
+            return 33 + (((SDNN - SDNN33) /
+                    (SDNN66 - SDNN33)) * (33 / 100));
+        } else if (SDNN66 <= SDNN && SDNN < SDNNMax) {
+            return 66 + (((SDNN - SDNN66) /
+                    (SDNNMax - SDNN66)) * (34 / 100));
+        } else if (SDNN >= SDNNMax) {
+            SDNNMax = SDNN;
+            return 100;
+        } else {
+            Log.e("out of bounds", "getSDNN Stress Percentage failure!");
+            return 0; //SHOULD NOT HAPPEN
+        }
+    }
+
+    //select the right packets and process them
+    public double getGSRStress(ArrayList<Packet> packets) {
+        double gsrAccumulator = 0;
+        double gsrCount = 0;
+
+        for (Packet packet : packets) {
+            if (packet.getGSR() > gsrCutoff) {
+                gsrAccumulator += packet.getGSR();
+                gsrCount++;
+            }
+        }
+
+        double averageGSR = gsrAccumulator / gsrCount;
+        return getGSRStressPercentage(averageGSR);
+
+
+    }
+
+    //select the right packets and process them
+    public double getIBIStress(ArrayList<Packet> packets) {
+
+
+        double ibiAccumulator = 0;
+        double ibiCount = 0;
+
+        //getting the mean and number of useful packets
+        for (Packet packet : packets) {
+            if (packet.getIBI() > ibiCutoff) {
+                ibiAccumulator += packet.getIBI();
+                ibiCount++;
+            }
+        }
+
+        //average calculated
+        double averageIBI = ibiAccumulator / ibiCount;
+
+        //CALCULATE SDNN:
+        // = SQRT( (1 / ibiCount) * sumofall((ibiVal - ibiMean)^2))
+
+        //all (xi - xavg) ^ 2 - calculate squared sum
+        double sumSquared = 0;
+        for (Packet packet : packets) {
+            if (packet.getIBI() > ibiCutoff) {
+                sumSquared += Math.pow((packet.getIBI() - averageIBI), 2);
+            }
+        }
+
+        //final SDNN value
+        double SDNN = Math.sqrt((1 / ibiCount) * sumSquared);
+
+        //calculate the stress percentage based SDNN
+        return getSDNNStressPercentage(SDNN);
+
+
+    }
+
+    public double getStressIndex(ArrayList<Packet> packets) {
+        //we assume that we have received EXACTLY 60 seconds of data
+
+        //firstly, get the reliability of the data
+        double percentUsefulGSR = getPercentUsefulGSR(packets);
+        double percentUsefulIBI = getPercentUsefulIBI(packets);
+
+        //check the percentage of good data, get a boolean indicating for both cases
+        boolean gsrIsUseful = percentUsefulGSR <= percentageCutoff;
+        boolean ibiIsUseful = percentUsefulIBI <= percentageCutoff;
+
+        //default values to check for
+        double gsrStress = 0;
+        double ibiStress = 0;
+
+
+        if (gsrIsUseful) {
+            gsrStress = getGSRStress(packets);
+        }
+
+        if (ibiIsUseful) {
+            ibiStress = getIBIStress(packets);
+        }
+
+        double stressSum = gsrStress + ibiStress;
+
+        //return a stress value depending on what data is useful
+        if (gsrIsUseful && ibiIsUseful) {
+            return (gsrStress + ibiStress) / 2;
+        } else if ((gsrIsUseful && !ibiIsUseful) || (!gsrIsUseful && ibiIsUseful)) {
+            return stressSum;
+        } else {
+            Log.e("bad data", "Both gsr and ibi - useless data!");
+            return -10;
+        }
+
+    }
+
+    public void dataExtractor(String sentValues) {
 
         Log.d("data", "Sentvalues: " + sentValues);
 
@@ -195,8 +448,11 @@ public class RealGraphActivity extends Activity {
 
         //PRE-PROCESSING/
         String inputData = recDataString.toString();
-        //trim the incoming data to make sure we start with a #
+
         if (firstData) {
+            //properly set the next compute time (TO NOW + 1min)
+            nextComputeTime = Calendar.getInstance().getTimeInMillis() + msecBetweenComputes;
+            //trim the incoming data to make sure we start with a #
             inputData = trimStart(inputData);
             firstData = true;
             Log.d("data", "Post-trim: " + inputData);
@@ -213,8 +469,6 @@ public class RealGraphActivity extends Activity {
         //check if the last packet ends with a |
         if (packetEndsProperly(stringed)) {
             packetsToProcess = splitPackets;
-
-
 
             //reset the string accumulator
             recDataString.setLength(0);
@@ -237,73 +491,33 @@ public class RealGraphActivity extends Activity {
             double time_elapsed = Double.parseDouble(packet.substring(time_elapsed_idx));
 
             //update graph
-            gsrSeries.appendData(new DataPoint(time_elapsed, gsr), true, 40);
-            ibiSeries.appendData(new DataPoint(time_elapsed, ibi), true, 40);
+            gsrSeries.appendData(new DataPoint(time_elapsed, gsr), true, numPointsToDisplay);
+            ibiSeries.appendData(new DataPoint(time_elapsed, ibi), true, numPointsToDisplay);
 
             //Log.d("data", "ibi: " + ibi + " ||| gsr: " + gsr + " ||| time_elapsed: " + time_elapsed);
             outText.setText("ibi: " + ibi + " ||| gsr: " + gsr + " ||| time_elapsed: " + time_elapsed);
-            dataPackets.add(new Packet(gsr, time_elapsed));
+            dataPackets.add(new Packet(gsr, time_elapsed, ibi));
+            Log.d("data", "datapackets length " + dataPackets.size());
+        }
+
+
+        //have to compute now!
+        if (Calendar.getInstance().getTimeInMillis() > nextComputeTime) {
+            //do computation
+            double stressIndex = getStressIndex(dataPackets);
+            Log.d("STRESSINDEX", stressIndex +"");
+            //Toast.makeText(getApplicationContext(), stressIndex + "", Toast.LENGTH_LONG).show();
+            //clear packets
+            dataPackets.clear();
+
+            //set next compute time
+            nextComputeTime = Calendar.getInstance().getTimeInMillis() + msecBetweenComputes;
+        } else {
+            Log.d("time", "time left: " + (nextComputeTime - Calendar.getInstance().getTimeInMillis()));
         }
 
 
 
-/*
-        int gsr_idx = sentValues.indexOf("+") + 1;
-        int time_elapsed_idx = sentValues.indexOf("$") + 1;
-
-
-        //Extracting the values
-        double gsr = Double.parseDouble(sentValues.substring(gsr_idx, time_elapsed_idx - 1));
-        Log.d("data", "gsr: " + gsr);
-        int time_elapsed = Integer.parseInt(sentValues.substring(time_elapsed_idx));
-        Log.d("data", "time elapsed: " + sentValues);
-
-
-        //time_elapsed_idx is the latest packet time
-        if (time_elapsed > next_computation_time) {
-            //we have reached the next compute step
-            //get SDNN
-            //set initial SDNN counter to 1
-            //can use subList(inclusive, exclusive) to get a sublist of the arraylist
-            List<Packet> packetsToProcess = dataPackets.subList(compute_index_from, dataPackets.size() - 1);
-
-
-            ArrayList<Double> allGSRValues = new ArrayList<Double>();
-
-            for (Packet p : packetsToProcess) {
-                allGSRValues.add(p.getGSR());
-            }
-
-            // find average value
-            //double avgIBI = averager(allIBIValues);
-            double avgGSR = averager(allGSRValues);
-            //seriesGSR.add(new DataPoint(timeXAxis, avgGSR));
-
-            Log.d("data", "timex | avgsr: " + timeXAxis + "|" + avgGSR);
-
-            //seriesGSR.add(new GraphViewData(timeXAxis, avgGSR));
-            timeXAxis++;
-
-            //System.out.println("Std Dev: " + stdDev(allIBIValues, avgIBI));
-
-
-            //finding std dev for ibi
-
-            // printList(allGSRValues);
-
-            // for(Packet p : packetsToProcess){
-            // 	System.out.println(p.getRepr());
-            // }
-
-            //to get the relevant portion of packets from the datapackets - use
-            //dataPackets.subList(compute_index_from, datapackets.size() - 1);
-
-            //add the required compute time
-            next_computation_time += computation_step;
-            //set the next compute index to the correct point
-            compute_index_from = dataPackets.size();
-        }
-*/
     }
 
     public static double averager(ArrayList<Double> values) {
@@ -322,9 +536,11 @@ public class RealGraphActivity extends Activity {
         return device.createRfcommSocketToServiceRecord(MY_UUID);
         //creates secure outgoing connection with BT device using UUID
     }
-
+/*
     @Override
     public void onResume() {
+
+
         super.onResume();
         //create device and set the MAC address
         BluetoothDevice device = btAdapter.getRemoteDevice(address);
@@ -351,8 +567,8 @@ public class RealGraphActivity extends Activity {
         mConnectedThread.write("x");
 
     }
-
-
+*/
+/*
     @Override
     public void onPause() {
         super.onPause();
@@ -363,7 +579,7 @@ public class RealGraphActivity extends Activity {
             //insert code to deal with this
         }
     }
-
+*/
 
     //Checks that the Android device Bluetooth is available and prompts to be turned on if off
     private void checkBTState() {
@@ -438,15 +654,24 @@ public class RealGraphActivity extends Activity {
 
         private double gsr;
         private double time_elapsed;
+        private double ibi;
 
-        public Packet(double gsr, double time_elapsed) {
+        public Packet(double gsr, double time_elapsed, double ibi) {
 
             this.gsr = gsr;
             this.time_elapsed = time_elapsed;
+            this.ibi = ibi;
         }
 
         public double getGSR() {
             return this.gsr;
+        }
+        public double getIBI() {
+            return this.ibi;
+        }
+
+        public double getTimeElapsed() {
+            return this.time_elapsed;
         }
     }
 }
