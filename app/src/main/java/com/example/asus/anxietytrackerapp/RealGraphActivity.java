@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -90,6 +91,21 @@ public class RealGraphActivity extends Activity {
     ArrayList<Packet> testPackets = new ArrayList<>();
     ArrayList<Packet> maxPackets = new ArrayList<>();
 
+    //in MILISECONDS! Minimum duration of tests\
+    /* TEST VERSION */
+
+    double minimumBaselineDuration = 1000;
+    double minimumTestDuration = 1000;
+    double minimumMaxDuration = 1000;
+    double sdnnAverageTimeInterval = 5000;
+
+    /* REAL VERSION
+    double minimumBaselineDuration = 120000;
+    double minimumTestDuration = 120000;
+    double minimumMaxDuration = 120000;
+
+    double sdnnAverageTimeInterval = 60000;
+    */
     /*
         END OF SETTINGS
      */
@@ -102,6 +118,10 @@ public class RealGraphActivity extends Activity {
 
     //to plot realtime graph
     private Runnable mTimer1;  //GSR = 1
+
+
+    private GraphView stressGraph;
+    LineGraphSeries<DataPoint> stressSeries = new LineGraphSeries<>();
 
     private GraphView gsrGraph;
     LineGraphSeries<DataPoint> gsrSeries = new LineGraphSeries<>();
@@ -147,6 +167,13 @@ public class RealGraphActivity extends Activity {
 
         //Toast.makeText(this, "onCreate, ReadGraph..", Toast.LENGTH_LONG).show();
         //seriesGSR = new ArrayList<DataPoint>();
+
+
+        //Graph setup - Stress
+        stressGraph = (GraphView)findViewById(R.id.graphStress);
+        stressGraph.getViewport().setXAxisBoundsManual(false);
+        stressGraph.getViewport().setYAxisBoundsManual(false);
+        stressGraph.addSeries(stressSeries);
 
         //Graph setup - GSR
         gsrGraph = (GraphView)findViewById(R.id.graph);
@@ -216,6 +243,24 @@ public class RealGraphActivity extends Activity {
             }
         });
 
+        final Button defaultCalib = (Button) findViewById(R.id.buttonCalibrate);
+        defaultCalib.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gsrMin  = defaultGSRMin;
+                gsrMax  = defaultGSRMax;
+                gsr33   = defaultGSR33 ;
+                gsr66   = defaultGSR66 ;
+                SDNNMin = defaultSDNNMin;
+                SDNNMax = defaultSDNNMax;
+                SDNN33  = defaultSDNN33 ;
+                SDNN66  = defaultSDNN66 ;
+
+
+            }
+        });
+
+
 //Thread handlers are implemented in the main thread of an application and are primarily used to make updates to the user interface in response
 // to messages sent by another thread running within the application’s process.
 
@@ -278,6 +323,8 @@ public class RealGraphActivity extends Activity {
         return averageGSR;
     }
 
+
+
     public double getSDGSR(ArrayList<Packet> packets) {
         double gsrAccumulator = 0;
         double gsrCount = 0;
@@ -306,6 +353,55 @@ public class RealGraphActivity extends Activity {
         double SD = Math.sqrt((1 / gsrCount) * sumSquared);
         Log.d("SDNN", "GSR SD: " + SD);
         
+        return SD;
+    }
+
+    public double getSDSDNN(ArrayList<Double> sdnns) {
+
+        double avgSDNN = averager(sdnns);
+        
+
+        //all (xi - xavg) ^ 2 - calculate squared sum
+        double sumSquared = 0;
+        for (Double sdnn : sdnns) {
+                sumSquared += Math.pow((sdnn - avgSDNN), 2);
+        }
+
+        //final SD value
+        double SDSDNN = Math.sqrt((1 / sdnns.size()) * sumSquared);
+        Log.d("SDSDNN", "SDNNSD: " + SDSDNN);
+
+        return SDSDNN;
+    }
+
+    public double getSDNN(ArrayList<Packet> packets) {
+        double IBIAccumulator = 0;
+        double IBICount = 0;
+
+        //getting the mean and number of useful packets
+        for (Packet packet : packets) {
+            if (packet.getIBI() > ibiCutoff) {
+                IBIAccumulator += packet.getIBI();
+                IBICount++;
+            }
+        }
+
+        //average calculated
+        double averageIBI = IBIAccumulator / IBICount;
+
+
+        //all (xi - xavg) ^ 2 - calculate squared sum
+        double sumSquared = 0;
+        for (Packet packet : packets) {
+            if (packet.getIBI() > ibiCutoff) {
+                sumSquared += Math.pow((packet.getIBI() - averageIBI), 2);
+            }
+        }
+
+        //final SD value
+        double SD = Math.sqrt((1 / IBICount) * sumSquared);
+        Log.d("SDNN", "IBI SD = SDNN: " + SD);
+
         return SD;
     }
 
@@ -398,17 +494,17 @@ public class RealGraphActivity extends Activity {
         } else if (LMT < HMS && LMT > baselineAvg) {
             gsr33 = (LMT + HMS) / 2;
         } else if (LMT < baselineAvg) {
-            gsr33 = baselineAvg;
+            gsr33 = testAvg;
         } else {
             Log.d("gsr33 problem", "edge case for gsr33");
         }
 
-        if (LMM > HMT) {
+        if (LMM >= HMT) {
             gsr66 = LMM;
-        } else if (LMM < HMT && LMM > testAvg) {
+        } else if (LMM <= HMT && LMM >= testAvg) {
             gsr66 = (LMM + HMT) / 2;
-        } else if (LMM < testAvg) {
-            gsr66 = testAvg;
+        } else if (LMM <= testAvg) {
+            gsr66 = maxAvg;
         } else {
             Log.d("gsr66 problem", "edge case for gsr66");
         }
@@ -419,11 +515,166 @@ public class RealGraphActivity extends Activity {
         Log.d("gsr66", gsr66 + "");
         Log.d("gsrMax", gsrMax + "");
 
-
-
-
-
         // ---- END GSR SECTION ----
+
+
+        // ---- START IBI TO SDNN CONVERSION SECTION ----
+        //initialise the basic sdnn arrays
+        ArrayList<Double> baselineSDNN = new ArrayList<>();
+        ArrayList<Double> testSDNN = new ArrayList<>();
+        ArrayList<Double> maxSDNN = new ArrayList<>();
+        
+        
+       
+        /*
+        //get an array of baseline AND test packets to moving average over
+        ArrayList<Packet> baselineAndTestPackets = new ArrayList<>();
+        baselineAndTestPackets.addAll(baselinePackets);
+        baselineAndTestPackets.addAll(testPackets);
+
+        ArrayList<Packet> testAndMaxPackets = new ArrayList<>();
+        baselineAndTestPackets.addAll(testPackets);
+        baselineAndTestPackets.addAll(maxPackets);
+        */
+        
+        //Need to convert IBI Values to moving average SDNN arrays
+        //check for correct durations!
+        if ((getPacketListDuration(baselinePackets) > minimumBaselineDuration) ||
+                (getPacketListDuration(testPackets) > minimumTestDuration) ||
+                (getPacketListDuration(maxPackets) > minimumMaxDuration)) {
+
+
+            //get the baseline SDNN values
+            for (int i = 0; i < baselinePackets.size(); i++) {
+                //get moving 60s window of data from packets
+                ArrayList<Packet> currentWindow = getXMsecDataFromIndex(baselinePackets, sdnnAverageTimeInterval, i);
+                if (currentWindow.size() != 0) {
+                    //if we didn't get returned zero, means we are still within the bounds of the array
+                    baselineSDNN.add(getSDNN(currentWindow));
+                } else {
+                    break;
+                }
+
+            }
+            //get the test SDNN values
+            for (int i = 0; i < testPackets.size(); i++) {
+                //get moving 60s window of data from packets
+                ArrayList<Packet> currentWindow = getXMsecDataFromIndex(testPackets, sdnnAverageTimeInterval, i);
+                if (currentWindow.size() != 0) {
+                    //if we didn't get returned zero, means we are still within the bounds of the array
+                    testSDNN.add(getSDNN(currentWindow));
+                } else {
+                    break;
+                }
+
+            }
+
+            //get the max SDNN values
+            for (int i = 0; i < maxPackets.size(); i++) {
+                //get moving 60s window of data from packets
+                ArrayList<Packet> currentWindow = getXMsecDataFromIndex(maxPackets, sdnnAverageTimeInterval, i);
+                if (currentWindow.size() != 0) {
+                    //if we didn't get returned zero, means we are still within the bounds of the array
+                    maxSDNN.add(getSDNN(currentWindow));
+                } else {
+                    break;
+                }
+
+            }
+
+            // ---- END IBI TO SDNN CONVERSION SECTION ----
+            
+
+            
+        } else {
+            Log.e("min durations", "Minimum durations not followed for calib!");
+            throw new IllegalArgumentException("min durations incorrect");
+        }
+
+        Log.d("sdnn lengths", "base sdnn: " + baselineSDNN.size()  + "test sdnn: " + maxSDNN.size() +  "base sdnn: " + maxSDNN.size());
+
+        // ---- START SDNN CALIBRATION SECTION ----        
+        double baselineSDNNAverage = averager(baselineSDNN);
+        double testSDNNAverage = averager(testSDNN);
+        double maxSDNNAverage = averager(maxSDNN);
+
+        Log.d("overallsddnn", "baseline avg: " + baselineSDNNAverage + " testsdnnaverage: " + testSDNNAverage + " maxSDNNAvg: " + maxSDNNAverage );
+
+
+
+        double baselineSDNNSD = getSDSDNN(baselineSDNN);
+        double testSDNNSD = getSDSDNN(testSDNN);
+        double maxSDNNSD = getSDSDNN(maxSDNN);
+
+        Log.d("overallsddnn", "baseline sdnnsd: " + baselineSDNNSD + " testsdnnasd: " + testSDNNSD + " maxSDNNSd: " + maxSDNNSD );
+
+
+        ArrayList<Double> overallSDNNValues = new ArrayList<>();
+        overallSDNNValues.addAll(baselineSDNN);
+        overallSDNNValues.addAll(testSDNN);
+        overallSDNNValues.addAll(maxSDNN);
+
+
+        double overallSDNNMin = Collections.min(overallSDNNValues);
+        double overallSDNNMax = Collections.max(overallSDNNValues);
+
+        Log.d("overallsddnn", "overallSDNNValues len: " + overallSDNNValues.size() + " overall sdnnmin: " + overallSDNNMin + " overallsdnnmax: " + overallSDNNMax );
+        Log.d("overallsddnn",  "min: " + Collections.min(overallSDNNValues) + " | max: " + Collections.max(overallSDNNValues));
+
+
+        Log.d("BEFORE", "BEFORE!");
+        Log.d("SDNNMin", SDNNMin + "");
+        Log.d("SDNN33", SDNN33 + "");
+        Log.d("SDNN66", SDNN66 + "");
+        Log.d("SDNNMax", SDNNMax + "");
+
+
+        //NOTE: MIN AND MAX FLIPPED! ON PURPOSE!
+        SDNNMin = overallSDNNMax;
+        SDNNMax = overallSDNNMin;
+        
+        //95% CONFIDENCE INTERVAL BOUNDS
+        //L = lower, H = higher
+        //M = mean
+        //S = start, T = test, M = max
+        //pick and choose to figure out name
+        double LMS_SDNN = (1.96 * baselineSDNNSD) - baselineSDNNAverage;
+        double HMS_SDNN = (1.96 * baselineSDNNSD) + baselineSDNNAverage;
+        double LMT_SDNN = (1.96 * testSDNNSD) - testSDNNAverage;
+        double HMT_SDNN = (1.96 * testSDNNSD) + testSDNNAverage;
+        double LMM_SDNN = (1.96 * maxSDNNSD) - maxSDNNAverage;
+        double HMM_SDNN = (1.96 * maxSDNNSD) + maxSDNNAverage;
+
+        //based on syad's rules: setting calib values
+        //sorry if this is incomprehensible, had good reason.
+
+        if (HMT_SDNN <= LMS_SDNN) {
+            SDNN33 = HMT_SDNN;
+        } else if (HMT_SDNN >= LMS_SDNN && HMT_SDNN <= baselineSDNNAverage) {
+            SDNN33 = (HMT_SDNN + LMS_SDNN) / 2;
+        } else if (HMT_SDNN >= baselineSDNNAverage) {
+            SDNN33 = testSDNNAverage;
+        } else {
+            Log.d("SDNN33 problem", "edge case for SDNN33");
+        }
+
+        if (HMM_SDNN < LMT_SDNN) {
+            SDNN66 = HMM_SDNN;
+        } else if (HMM_SDNN > LMT_SDNN && HMT_SDNN < testSDNNAverage) {
+            SDNN66 = (HMM_SDNN + LMT_SDNN) / 2;
+        } else if (HMM_SDNN > testSDNNAverage) {
+            SDNN66 = maxSDNNAverage;
+        } else {
+            Log.d("SDNN33 problem", "edge case for SDNN66");
+        }
+
+
+        Log.d("AFTER", "AFTER!!");
+        Log.d("SDNNMin", SDNNMin + "");
+        Log.d("SDNN33", SDNN33 + "");
+        Log.d("SDNN66", SDNN66 + "");
+        Log.d("SDNNMax", SDNNMax + "");
+
 
         //clear all packet buffers at end
         baselinePackets.clear();
@@ -457,12 +708,63 @@ public class RealGraphActivity extends Activity {
         return doubleToCheck >= -doubleZeroThreshold && doubleToCheck <= doubleZeroThreshold;
     }
 
-    /*
-    //gets the last x miliseconds of data
-    public ArrayList<Packet> getLastXMsecData(ArrayList<Packet> packets) {
-        ArrayList<Packet> packetsToReturn
+    //gets the length of a list of packets (duration elapsed between first and last)
+    public double getPacketListDuration(ArrayList<Packet> packets) {
+        double startTime = packets.get(0).getTimeElapsed();
+        double endTime = packets.get(packets.size() - 1).getTimeElapsed();
+
+        return endTime - startTime;
     }
-    */
+
+    //gets the last x miliseconds of data
+    public ArrayList<Packet> getLastXMsecData(ArrayList<Packet> packets, double msec) {
+        ArrayList<Packet> packetsToReturn = new ArrayList<>();
+
+        //grab the last packet and check the timing, minus msec from it to get the cutoff
+        double msecCutoff = packetsToReturn.get(packetsToReturn.size() - 1).getTimeElapsed() - msec;
+
+        for (int i = packets.size() - 1; i >= 0; i--) {
+            if (packets.get(i).getTimeElapsed() >= msecCutoff) {
+                packetsToReturn.add(packets.get(i));
+            } else {
+                //we have reached the cutoff point, break
+                break;
+            }
+        }
+
+        return packetsToReturn;
+    }
+
+    //gets the first x miliseconds of data
+    //also, RETURN NOTHING IF WE HAVE EXCEEDED THE SIZE OF THE ARRAY
+    //we want to make sure that we are returning a SUBSET
+    public ArrayList<Packet> getXMsecDataFromIndex(ArrayList<Packet> packets, double msec, int startIdx) {
+
+        Log.d("getxmsec", "packets len: " + packets.size() + " msec: "  + msec + " startidx: " + startIdx);
+
+        ArrayList<Packet> packetsToReturn = new ArrayList<>();
+
+        //grab the last packet and check the timing, add msec from it to get the cutoff
+        double msecCutoff = packets.get(startIdx).getTimeElapsed() + msec;
+
+        Log.d("mseccutoff", "Start time: " + (msecCutoff - msec) + " | Msec cutoff: " + msecCutoff);
+        for (int i = startIdx; i < packets.size(); i++) {
+            Log.d("time elapsed for packet", "Packet idx: " + i + " | time : " + packets.get(i).getTimeElapsed());
+            if (packets.get(i).getTimeElapsed() <= msecCutoff) {
+                packetsToReturn.add(packets.get(i));
+            } else {
+                //we have reached the cutoff point, return values
+                Log.d("packetstoreturn", "len of packets to return: " + packetsToReturn.size());
+                return packetsToReturn;
+            }
+        }
+
+        //we reached the end of the array, that means we are no longer taking a subset. return an empty Arraylist
+        Log.d("end of array", "reached end of array for : "  +  "packets len: " + packets.size() + " msec: "  + msec + " startidx: " + startIdx);
+        return new ArrayList<Packet>();
+
+    }
+
 
     //calculate the percentage of samples in the packet list that have useful GSR data
     public double getPercentUsefulGSR(ArrayList<Packet> packets) {
@@ -500,14 +802,14 @@ public class RealGraphActivity extends Activity {
             //not stressed
             return ((avgGsr - gsrMin)
                           /
-                    (gsr33 - gsrMin))   * (33 / 100);
+                    (gsr33 - gsrMin))   * (33);
         } else if (gsr33 <= avgGsr && avgGsr < gsr66) {
             //stressed
             return 33 + (((avgGsr - gsr33) /
-                         (gsr66 - gsr33)) * (33 / 100));
+                         (gsr66 - gsr33)) * (33));
         } else if (gsr66 <= avgGsr && avgGsr < gsrMax) {
             return 66 + (((avgGsr - gsr66) /
-                         (gsrMax - gsr66)) * (34 / 100));
+                         (gsrMax - gsr66)) * (34));
         } else if (avgGsr >= gsrMax) {
             gsrMax = avgGsr;
             return 100;
@@ -519,23 +821,19 @@ public class RealGraphActivity extends Activity {
 
     //calculate a SDNN Stress value from the average SDNN
     public double getSDNNStressPercentage(double SDNN) {
-        if (SDNN < SDNNMin) {
+        if (SDNN > SDNNMin) {
             //not stressed and below the normal min
             SDNNMin = SDNN;
             return 0;
-        } else if (SDNNMin <= SDNN && SDNN < SDNN33) {
+        } else if (SDNN <= SDNNMin  && SDNN >= SDNN33) {
             //not stressed
-            return ((SDNN - SDNNMin)
-                    /
-                    (SDNN33 - SDNNMin))   * (33 / 100);
-        } else if (SDNN33 <= SDNN && SDNN < SDNN66) {
+            return ((SDNNMin - SDNN) / (SDNNMin - SDNN33)) * (33);
+        } else if (SDNN <= SDNN33 && SDNN >= SDNN66) {
             //stressed
-            return 33 + (((SDNN - SDNN33) /
-                    (SDNN66 - SDNN33)) * (33 / 100));
+            return 33 + (((SDNN33 - SDNN) / (SDNN33 - SDNN66)) * (33));
         } else if (SDNN66 <= SDNN && SDNN < SDNNMax) {
-            return 66 + (((SDNN - SDNN66) /
-                    (SDNNMax - SDNN66)) * (34 / 100));
-        } else if (SDNN >= SDNNMax) {
+            return 66 + (((SDNN66 - SDNN) / (SDNN66 - SDNNMax)) * (33));
+        } else if (SDNN < SDNNMax) {
             SDNNMax = SDNN;
             return 100;
         } else {
@@ -597,7 +895,7 @@ public class RealGraphActivity extends Activity {
 
         //calculate the stress percentage based SDNN
         //do 100 MINUS because SDNN is inverse to the actual stress
-        return 100 - getSDNNStressPercentage(SDNN);
+        return getSDNNStressPercentage(SDNN);
 
 
     }
@@ -725,6 +1023,7 @@ public class RealGraphActivity extends Activity {
             //do computation
             double stressIndex = getStressIndex(dataPackets);
             Log.d("STRESSINDEX", stressIndex +"");
+            stressSeries.appendData(new DataPoint(Calendar.getInstance().getTimeInMillis(), stressIndex), true, numPointsToDisplay);
             //Toast.makeText(getApplicationContext(), stressIndex + "", Toast.LENGTH_LONG).show();
             //clear packets
             dataPackets.clear();

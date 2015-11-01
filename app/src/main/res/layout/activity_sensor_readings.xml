@@ -12,6 +12,11 @@
     <com.jjoe64.graphview.GraphView
         android:layout_width="match_parent"
         android:layout_height="200dip"
+        android:id="@+id/graphStress" />
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="200dip"
+        android:layout_below="@id/graphStress"
         android:id="@+id/graph" />
     <com.jjoe64.graphview.GraphView
         android:layout_width="match_parent"
@@ -32,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Large Text"
+        android:text="Packet Values: NIL"
         android:id="@+id/dataText"
         android:layout_below="@+id/graph2"
         android:layout_centerHorizontal="true" />
@@ -42,20 +47,30 @@
         android:layout_height="wrap_content"
         android:text="Start Calibration"
         android:id="@+id/buttonCalibrate"
-        android:layout_below="@+id/dataText"
-        android:layout_centerHorizontal="true"
-        android:enabled="false" />
+        android:enabled="false"
+        android:layout_alignTop="@+id/toggleButton"
+        android:layout_alignParentStart="true" />
 
     <ToggleButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="New ToggleButton"
         android:id="@+id/toggleButton"
-        android:layout_below="@+id/buttonCalibrate"
-        android:layout_centerHorizontal="true"
         android:checked="true"
         android:textOn="Analysis Mode"
-        android:textOff="Calibration Mode" />
+        android:textOff="Calibration Mode"
+        android:layout_below="@+id/dataText"
+        android:layout_alignEnd="@+id/graph2" />
+
+    <Button
+        android:layout_marginTop="30dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Set Default Calibration Values"
+        android:id="@+id/buttonDefaultCalib"
+        android:enabled="true"
+        android:layout_below="@+id/buttonCalibrate"
+        android:layout_centerHorizontal="true" />
 
 
 </RelativeLayout>
