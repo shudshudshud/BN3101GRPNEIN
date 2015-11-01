@@ -45,39 +45,41 @@ public class RealGraphActivity extends Activity {
     double doubleZeroThreshold = 0.05;
 
     //default GSR Calibration values
-    double defaultGSRMin = 0;
-    double defaultGSRMax = 6;
-    double defaultGSR33 = 2;
-    double defaultGSR66 = 4;
+    double defaultGSRMin = 0.60;
+    double defaultGSRMax = 1.10;
+    double defaultGSR33 = 5.65;
+    double defaultGSR66 = 7.63;
 
-    //actual GSR values
-    double gsrMin = 0;
-    double gsrMax = 6;
-    double gsr33 = 2;
-    double gsr66 = 4;
+
+    //default SDNN Calibration values
+    double defaultSDNNMin = 300;
+    double defaultSDNNMax = 80;
+    double defaultSDNN33 = 140;
+    double defaultSDNN66 = 120;
+
+    //actual GSR and SDNN values
+    double gsrMin  = defaultGSRMin;
+    double gsrMax  = defaultGSRMax;
+    double gsr33   = defaultGSR33 ;
+    double gsr66   = defaultGSR66 ;
+    double SDNNMin = defaultSDNNMin;
+    double SDNNMax = defaultSDNNMax;
+    double SDNN33  = defaultSDNN33 ;
+    double SDNN66  = defaultSDNN66 ;
 
     //GSR Cutoff for good/bad values
-    double gsrCutoff = 0.6;
+    double gsrCutoff = 0.55;
     //IBI Cutoff for good/bad values
     double ibiCutoff = 0.1;
 
     double percentageCutoff = 20.0;
     //double sdnnCutoff = 0.0;
 
-    //default SDNN Calibration values
-    double defaultSDNNMin = 0;
-    double defaultSDNNMax = 6;
-    double defaultSDNN33 = 2;
-    double defaultSDNN66 = 4;
 
-    //actual SDNN values
-    double SDNNMin = 0;
-    double SDNNMax = 6;
-    double SDNN33 = 2;
-    double SDNN66 = 4;
+
 
     long nextComputeTime;
-    long msecBetweenComputes = 5000;
+    long msecBetweenComputes = 60000;
 
     public enum CALIBRATION_STATE {
         BEFORE_CALIB, DURING_BASELINE, BREAK_BEFORE_TEST, DURING_TEST, BREAK_BEFORE_MAX, DURING_MAX, AFTER_MAX
@@ -92,20 +94,25 @@ public class RealGraphActivity extends Activity {
     ArrayList<Packet> maxPackets = new ArrayList<>();
 
     //in MILISECONDS! Minimum duration of tests\
-    /* TEST VERSION */
+    /* TEST VERSION
 
     double minimumBaselineDuration = 1000;
     double minimumTestDuration = 1000;
     double minimumMaxDuration = 1000;
     double sdnnAverageTimeInterval = 5000;
 
-    /* REAL VERSION
-    double minimumBaselineDuration = 120000;
-    double minimumTestDuration = 120000;
-    double minimumMaxDuration = 120000;
+    */
+
+    /* REAL VERSION */
+    double minimumBaselineDuration = 100000;
+    double minimumTestDuration = 100000;
+    double minimumMaxDuration = 100000;
 
     double sdnnAverageTimeInterval = 60000;
-    */
+
+
+    //stress graph x axis
+    double xAxisStress = 0;
     /*
         END OF SETTINGS
      */
@@ -156,8 +163,8 @@ public class RealGraphActivity extends Activity {
     public static UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     //specify the MAC address of the Bluetooth address that you want to connect to
-    //private static String address = "98:D3:31:70:4D:02";
-    private static String address = "98:D3:31:70:4C:C7";
+    private static String address = "98:D3:31:70:4D:02"; //FOR MICRO
+    //private static String address = "98:D3:31:70:4C:C7"; //FOR UNO
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -196,6 +203,8 @@ public class RealGraphActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //increase the current calibration state
+                Toast.makeText(getApplicationContext(), currentCalibrationState.toString(), Toast.LENGTH_SHORT).show();
+                Log.e("asdasd", "buton!");
                 if (currentCalibrationState != CALIBRATION_STATE.AFTER_MAX) {
                     //change calibration state
                     if (currentCalibrationState != CALIBRATION_STATE.DURING_MAX) {
@@ -217,8 +226,8 @@ public class RealGraphActivity extends Activity {
                     calibrationButton.setText(currentCalibrationState.toString());
                 } else {
 
-                    //currentCalibrationState = CALIBRATION_STATE.values()[0];
-                    //calibrationButton.setText(currentCalibrationState.toString());
+                    currentCalibrationState = CALIBRATION_STATE.values()[0];
+                    calibrationButton.setText(currentCalibrationState.toString());
                 }
             }
         });
@@ -227,6 +236,8 @@ public class RealGraphActivity extends Activity {
         toggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Toast.makeText(getApplicationContext(), "HI", Toast.LENGTH_SHORT).show();
+                Log.e("222", "222!");
                 calibrationButton.setEnabled(!calibrationButton.isEnabled());
                 currentCalibrationState = CALIBRATION_STATE.values()[0];
                 calibrationButton.setText(currentCalibrationState.toString());
@@ -243,7 +254,7 @@ public class RealGraphActivity extends Activity {
             }
         });
 
-        final Button defaultCalib = (Button) findViewById(R.id.buttonCalibrate);
+        final Button defaultCalib = (Button) findViewById(R.id.buttonDefaultCalib);
         defaultCalib.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1022,9 +1033,12 @@ public class RealGraphActivity extends Activity {
         if (Calendar.getInstance().getTimeInMillis() > nextComputeTime && !calibrationHappening) {
             //do computation
             double stressIndex = getStressIndex(dataPackets);
-            Log.d("STRESSINDEX", stressIndex +"");
-            stressSeries.appendData(new DataPoint(Calendar.getInstance().getTimeInMillis(), stressIndex), true, numPointsToDisplay);
+            Log.d("STRESSINDEX", stressIndex + "");
+            Toast.makeText(getApplicationContext(), "Time: " + Calendar.getInstance().getTimeInMillis() + " - Stress Index: " + stressIndex , Toast.LENGTH_LONG).show();
+            stressSeries.appendData(new DataPoint(xAxisStress, stressIndex), true, numPointsToDisplay);
             //Toast.makeText(getApplicationContext(), stressIndex + "", Toast.LENGTH_LONG).show();
+            //incr x axis for next time
+            xAxisStress++;
             //clear packets
             dataPackets.clear();
 
