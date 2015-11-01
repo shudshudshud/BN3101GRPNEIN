@@ -15,6 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
@@ -22,6 +23,7 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -46,14 +48,14 @@ public class RealGraphActivity extends Activity {
 
     //default GSR Calibration values
     double defaultGSRMin = 0.60;
-    double defaultGSRMax = 1.10;
-    double defaultGSR33 = 5.65;
-    double defaultGSR66 = 7.63;
+    double defaultGSRMax = 3.00;
+    double defaultGSR33 = 0.80;
+    double defaultGSR66 = 1.20;
 
 
     //default SDNN Calibration values
     double defaultSDNNMin = 300;
-    double defaultSDNNMax = 80;
+    double defaultSDNNMax = 50;
     double defaultSDNN33 = 140;
     double defaultSDNN66 = 120;
 
@@ -178,20 +180,35 @@ public class RealGraphActivity extends Activity {
 
         //Graph setup - Stress
         stressGraph = (GraphView)findViewById(R.id.graphStress);
-        stressGraph.getViewport().setXAxisBoundsManual(false);
-        stressGraph.getViewport().setYAxisBoundsManual(false);
+        //stressGraph.getViewport().setXAxisBoundsManual(false);
+        //stressGraph.getViewport().setYAxisBoundsManual(false);
+        stressGraph.getViewport().setYAxisBoundsManual(true);
+        stressGraph.getGridLabelRenderer().setHorizontalLabelsVisible(false);
+        stressGraph.getViewport().setMinY(-10);
+        stressGraph.getViewport().setMaxY(100);
+
         stressGraph.addSeries(stressSeries);
 
         //Graph setup - GSR
         gsrGraph = (GraphView)findViewById(R.id.graph);
-        gsrGraph.getViewport().setXAxisBoundsManual(false);
-        gsrGraph.getViewport().setYAxisBoundsManual(false);
+        //gsrGraph.getViewport().setXAxisBoundsManual(false);
+        //gsrGraph.getViewport().setMinX(0.00);
+        //gsrGraph.getViewport().setMaxX(100000.00);
+        gsrGraph.getViewport().setYAxisBoundsManual(true);
+        gsrGraph.getGridLabelRenderer().setHorizontalLabelsVisible(false);
+        gsrGraph.getViewport().setMinY(0);
+        gsrGraph.getViewport().setMaxY(10);
         gsrGraph.addSeries(gsrSeries);
+
 
         //Graph setup - IBI
         ibiGraph = (GraphView)findViewById(R.id.graph2);
-        ibiGraph.getViewport().setXAxisBoundsManual(false);
-        ibiGraph.getViewport().setYAxisBoundsManual(false);
+        //ibiGraph.getViewport().setXAxisBoundsManual(false);
+        //ibiGraph.getViewport().setYAxisBoundsManual(false);
+        ibiGraph.getViewport().setYAxisBoundsManual(true);
+        ibiGraph.getGridLabelRenderer().setHorizontalLabelsVisible(false);
+        ibiGraph.getViewport().setMinY(0);
+        ibiGraph.getViewport().setMaxY(1500);
         ibiGraph.addSeries(ibiSeries);
 
         outText = ((TextView)findViewById(R.id.dataText));
@@ -241,6 +258,8 @@ public class RealGraphActivity extends Activity {
                 calibrationButton.setEnabled(!calibrationButton.isEnabled());
                 currentCalibrationState = CALIBRATION_STATE.values()[0];
                 calibrationButton.setText(currentCalibrationState.toString());
+
+
 
                 if (!calibrationButton.isEnabled()) {
                     calibrationHappening = false;
@@ -992,10 +1011,11 @@ public class RealGraphActivity extends Activity {
 
         //ACTUAL PACKET PROCESSING CODE
         for (String packet : packetsToProcess) {
+            int ibi_idx = packet.indexOf("#") + 1;
             int gsr_idx = packet.indexOf("+") + 1;
             int time_elapsed_idx = packet.indexOf("$") + 1;
 
-            double ibi = Double.parseDouble(packet.substring(1, gsr_idx - 1));
+            double ibi = Double.parseDouble(packet.substring(ibi_idx, gsr_idx - 1));
             double gsr = Double.parseDouble(packet.substring(gsr_idx, time_elapsed_idx - 1));
             double time_elapsed = Double.parseDouble(packet.substring(time_elapsed_idx));
 

@@ -45,7 +45,7 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_profile_login_page);
-
+        dateView = (TextView) findViewById(R.id.textViewDOB);
         myName = (EditText) findViewById(R.id.editText);
 
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
@@ -155,7 +155,7 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
     public String getProfile (String a, String b) {
         myName = (EditText) findViewById(R.id.editText);
-        dateView = (TextView) findViewById(R.id.textView4);
+        dateView = (TextView) findViewById(R.id.textViewDOB);
         selectedFitness = (TextView) findViewById(R.id.textView12);
         selectedGender = (TextView) findViewById(R.id.textView2);
 
@@ -189,7 +189,7 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
     private void setCurrentDate() {
 
-        dateView = (TextView) findViewById(R.id.textView4);
+        dateView = (TextView) findViewById(R.id.textViewDOB);
         datePicker = (DatePicker) findViewById(R.id.datePicker);
 
         final Calendar c = Calendar.getInstance();
@@ -225,7 +225,7 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
         public void onDateSet(DatePicker view, int mBirthYear, int mMonthOfYear, int mDayOfMonth) {
             year = mBirthYear;
-            month = mMonthOfYear;
+            month = mMonthOfYear + 1;
             day = mDayOfMonth;
 
             //set selected date into textview

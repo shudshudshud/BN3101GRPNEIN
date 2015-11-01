@@ -47,6 +47,17 @@
         android:layout_alignEnd="@+id/button2" />
 
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Name"
+        android:id="@+id/textView3"
+        android:layout_above="@+id/Gender"
+        android:layout_alignStart="@+id/textView4"
+        android:layout_alignTop="@+id/editText"
+        android:layout_alignEnd="@+id/textView" />
+
     <Button
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
@@ -87,17 +98,6 @@
         android:visibility="visible"
         android:layout_below="@+id/Gender"
         android:layout_alignEnd="@+id/datePicker" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Name"
-        android:id="@+id/textView3"
-        android:layout_above="@+id/Gender"
-        android:layout_alignStart="@+id/textView4"
-        android:layout_alignTop="@+id/editText"
-        android:layout_alignEnd="@+id/textView" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -170,6 +170,14 @@
         android:id="@+id/textView12"
         android:layout_alignBottom="@+id/PhysicalActivityLevel"
         android:layout_alignStart="@+id/editText" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:id="@+id/textViewDOB"
+        android:layout_alignTop="@+id/textView8"
+        android:layout_alignStart="@+id/textView6" />
 
 
 </RelativeLayout>

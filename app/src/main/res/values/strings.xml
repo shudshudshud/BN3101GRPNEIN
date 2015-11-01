@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AnxietyTrackerApp2</string>
+    <string name="app_name">ExoStress</string>
     <string name="action_settings">Settings</string>
     <string name="date_button_set">Set Date</string>
     <string name="title_activity_main_menu_page">MainMenuPage</string>
