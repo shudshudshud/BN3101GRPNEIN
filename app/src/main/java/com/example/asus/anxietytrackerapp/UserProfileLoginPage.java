@@ -39,6 +39,8 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
     public static final String Gender = "genderKey";
     public static final String Fitness = "fitnessKey";
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -250,5 +252,14 @@ public class UserProfileLoginPage extends Activity implements OnItemSelectedList
 
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        LoadPreferences();
+    }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+    }
 }
